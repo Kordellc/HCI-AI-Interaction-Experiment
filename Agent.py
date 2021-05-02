@@ -3,196 +3,116 @@ import time
 import random
 import os
 import neat
-
-RED = (250, 70, 80)
-LIGHT_RED = (200, 40, 50)
-WHITE = (255, 255, 255)
-
-global score
-score = 0
-
-BALL_IMG = pygame.image.load(os.path.join("images", "ball.png"))
-BACKGROUND = pygame.image.load(os.path.join("images", "background.png"))
-PLATFORM_IMG = pygame.image.load(os.path.join("images", "platform.png"))
-WALL_BLOCK = pygame.image.load(os.path.join("images", "wall.png"))
-
-WIDTH = 780
-HEIGHT = 480
-
-PLATFORM_WIDTH = 70
-PLATFORM_HEIGHT = 20
-
-GROUND = HEIGHT - PLATFORM_HEIGHT
-
-BORDER_WIDTH = 60
-BALL_RADIUS = 15
-
-PLATFORM_POS = [y for y in range(BORDER_WIDTH // 2, WIDTH - PLATFORM_WIDTH - BORDER_WIDTH // 2)]
+import visualize
+import Enviroment as E
+import pickle
 
 
-def drawWall(win):
-    for i in range(HEIGHT // (BORDER_WIDTH // 2)):
-        win.blit(WALL_BLOCK, (0, i * (BORDER_WIDTH // 2)))
-        win.blit(WALL_BLOCK, (WIDTH - BORDER_WIDTH // 2, i * (BORDER_WIDTH // 2)))
-
-    for i in range(1, WIDTH // (BORDER_WIDTH // 2) - 1):
-        win.blit(WALL_BLOCK, (i * (BORDER_WIDTH // 2), 0))
-    pygame.display.update()
-
-
-class Ball:
-    def __init__(self, platform):
-        self.y = platform.y + PLATFORM_WIDTH // 2
-        self.x = GROUND - BALL_RADIUS
-        self.prX = self.x
-        self.prY = self.y
-        self.dx = -1
-        self.score = 0
-        self.dy = random.choice([-1, 1])
-
-    def draw(self, win):
-        win.blit(BALL_IMG, (self.y, self.x))
-        drawWall(win)
-        pygame.display.update()
-
-    def drawEnd(self, win):
-        pygame.draw.circle(win, RED, (self.y, self.x), BALL_RADIUS)
-        pygame.draw.rect(win, LIGHT_RED, (0, 0, WIDTH, HEIGHT + BORDER_WIDTH), BORDER_WIDTH)
-        pygame.display.update()
-
-    def move(self, platform):
-        self.prX = self.x
-        self.prY = self.y
-
-        if self.y + 2 * BALL_RADIUS >= WIDTH - (BORDER_WIDTH // 2):
-            self.dy = -1
-
-        elif self.y - 0 <= BORDER_WIDTH // 2:
-            self.dy = 1
-
-        elif self.x - 0 <= BORDER_WIDTH // 2:
-            self.dx = 1
-
-        elif self.x - BALL_RADIUS == GROUND:
-            if self.y <= platform.y + PLATFORM_WIDTH and self.y >= platform.y:
-                self.dx = -1
-
-        self.x += 2 * self.dx
-        self.y += 2 * self.dy
-
-
-class PLatform:
+class Agent():
     def __init__(self):
-        self.x = GROUND
-        self.y = random.choice(PLATFORM_POS)
-        self.prX = self.x
-        self.prY = self.y
-        self.vel = 5
+        local_dir = os.path.dirname(__file__)
+        config_path = os.path.join(local_dir, "config-FeedForward.txt")
+        self.config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
+                                    neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                                    config_path)
+        self.jumpyBoy = neat.nn.FeedForwardNetwork
 
-    def draw(self, win):
-        win.blit(PLATFORM_IMG, (self.y, self.x))
-        drawWall(win)
-        pygame.display.update()
-
-    def drawEnd(self, win):
-        pygame.draw.rect(win, RED, (self.y, self.x, PLATFORM_WIDTH, PLATFORM_HEIGHT), 0)
-        pygame.draw.rect(win, LIGHT_RED, (0, 0, WIDTH, HEIGHT + BORDER_WIDTH), BORDER_WIDTH)
-        pygame.display.update()
-
-    def move(self, command):
-        self.prX = self.x
-        self.prY = self.y
-
-        if command == -1:
-            if self.y <= BORDER_WIDTH // 2:
-                command = 0
-
-        elif command == 1:
-            if self.y + PLATFORM_WIDTH >= WIDTH - (BORDER_WIDTH // 2):
-                command = 0
-
-        self.y = self.y + command * self.vel
-
+    def train(self, filename):
+        winner, stats = run(self.config)
+        playing = True
+        boy = neat.nn.FeedForwardNetwork.create(winner, self.config)
+        game = E.Game()
+        while playing:
+            output = boy.activate(game.getEnviroment())
+            finalOP = [True, True, True]
+            for out in enumerate(output):
+                if round(out[1]):
+                    finalOP[out[0]] = False
+            playing, score, _ = game.update(finalOP)
+        with open(f"{filename}.pkl", "wb") as f:
+            pickle.dump(winner, f)
+            f.close()
+        visualize.draw_net(self.config, winner, filename=f'{filename}')
+        visualize.plot_stats(stats, ylog=False, filename=f'{filename}-stats.svg')
+    def load(self, filename):
+        # genome = None
+        with open(f"{filename}.pkl", "rb") as f:
+            genome = pickle.load(f)
+            f.close()
+        # genomes = [(1, genome)]
+        self.jumpyBoy = neat.nn.FeedForwardNetwork.create(genome, self.config)
+    def getOutput(self, input):
+        finalOP = [False, False, False]
+        output = self.jumpyBoy.activate(input)
+        finalOP = [True, True, True]
+        for out in enumerate(output):
+            if round(out[1]):
+                finalOP[out[0]] = False
+        return finalOP
 
 def eval_genomes(genomes, config):
-    win = pygame.display.set_mode((WIDTH, HEIGHT))
-    clock = pygame.time.Clock()
-
     nets = []
     ge = []
-    balls = []
-    platforms = []
-
+    games = []
+    run = True
+    p = True
     for _, g in genomes:
-        net = neat.nn.FeedForwardNetwork.create(g, config)
+        net = neat.nn.FeedForwardNetwork.create(g, config)  # build network
         nets.append(net)
         g.fitness = 0
         ge.append(g)
-        platforms.append(PLatform())
+        games.append(E.Game(show=p, human=False))
+        if p:
+            p = False
+        # games.append(E.Game(p))
 
-    for platform in platforms:
-        balls.append(Ball(platform))
-
-    win.blit(BACKGROUND, (-10, -10))
-    drawWall(win)
-
-    run = True
     while run:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-                pygame.quit()
+        # for event in pygame.event.get():
+        #     if event.type == pygame.QUIT:
+        #         run = False
+        #         pygame.quit()
 
-        for x, ball in enumerate(balls):
+        for x, game in enumerate(games):
 
-            ge[x].fitness += 0.1
-            ball.move(platforms[x])
-
-            output = nets[x].activate((ball.dx, ball.dy, abs(platforms[x].y - ball.y), abs(platforms[x].x - ball.x)))
-            finalOP = output.index(max(output)) - 1
-
-            platforms[x].move(finalOP)
+            ge[x].fitness -= .1
+            # ball.move(platforms[x])
+            input =  game.getEnviroment()
+            output = nets[x].activate(input)
+            finalOP = [True, True, True]
+            for out in enumerate(output):
+                if round(out[1]):
+                    finalOP[out[0]] = False
+            # finalOP = output.index(max(output)) + 1
+            playing, score, _ = game.update(finalOP)
+            # output = nets[x].activate(
+            #     (ball.dx, ball.dy, abs(platforms[x].y - ball.y), abs(platforms[x].x - ball.x)))  # game imput
+            # finalOP = output.index(max(output)) - 1
+            #
+            # platforms[x].move(finalOP)
             # platforms[x].draw(win)
             # ball.draw(win)
 
-            if ball.x > platforms[x].x:
-                ball.drawEnd(win)
-                platforms[x].drawEnd(win)
-                ge[x].fitness -= 5
+            if ge[x].fitness >= 100000000:
+                # print("SCORE -> {}".format(balls[x].score))
+                run = False
+                break
+            # ge[x] += .1
+            # print((counts[x] - score))
+            if score < -100:
+                playing = False
+            if not playing: #(score+ 100):
+                ge[x].fitness += game.getScore()
+                # ge[x].fitness -= 5
                 nets.pop(x)
                 ge.pop(x)
-                balls.pop(x)
-                platforms.pop(x)
-
-            elif ball.x == platforms[x].x - BALL_RADIUS:
-                if ball.y >= platforms[x].y and ball.y <= platforms[x].y + PLATFORM_WIDTH:
-                    ge[x].fitness += 10
-                    ball.score += 1
-
-            # if ge[x].fitness >= 10000:
-            # 	print("SCORE -> {}".format(balls[x].score))
-            # 	run = False
-            # 	break
-
-        win.blit(BACKGROUND, (-10, -10))
-        drawWall(win)
-
-        for ball in balls:
-            ball.draw(win)
-
-        for platform in platforms:
-            platform.draw(win)
-        pygame.display.update()
-
-        if len(balls) == 0:
+                games.pop(x)
+                # print(f"chungus - {len(games)}/20 : {score}")
+        if len(games) == 0:
             run = False
             break
 
 
-def run(config_path):
-    config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
-                                neat.DefaultSpeciesSet, neat.DefaultStagnation,
-                                config_path)
+def run(config):
 
     p = neat.Population(config)
 
@@ -202,11 +122,12 @@ def run(config_path):
 
     winner = p.run(eval_genomes)
 
+    # neat.save_checkpoint(config, population, species_set, generation)
+
     print("Best fitness -> {}".format(winner))
+    return winner, stats
 
-
-if __name__ == "__main__":
-    local_dir = os.path.dirname(__file__)
-    config_path = os.path.join(local_dir, "config-FeedForward.txt")
-    run(config_path)
-
+# if __name__ == "__main__":
+#     local_dir = os.path.dirname(__file__)
+#     config_path = os.path.join(local_dir, "config-FeedForward.txt")
+#     run(config_path)
