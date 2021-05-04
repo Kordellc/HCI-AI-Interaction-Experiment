@@ -73,7 +73,7 @@ class Ball:
         elif self.x - 0 <= BORDER_WIDTH // 2:
             self.dx = 1
 
-        elif self.x - BALL_RADIUS == GROUND:
+        if self.x + BALL_RADIUS >= GROUND and self.x + BALL_RADIUS <= GROUND + PLATFORM_HEIGHT:
             if self.y <= platform.y + PLATFORM_WIDTH and self.y >= platform.y:
                 self.dx = -1
 
@@ -124,7 +124,7 @@ def eval_genomes(genomes, config):
     platforms = []
 
     for _, g in genomes:
-        net = neat.nn.FeedForwardNetwork.create(g, config)
+        net = neat.nn.FeedForwardNetwork.create(g, config) # build network
         nets.append(net)
         g.fitness = 0
         ge.append(g)
@@ -148,12 +148,16 @@ def eval_genomes(genomes, config):
             ge[x].fitness += 0.1
             ball.move(platforms[x])
 
-            output = nets[x].activate((ball.dx, ball.dy, abs(platforms[x].y - ball.y), abs(platforms[x].x - ball.x)))
+            output = nets[x].activate((ball.dx, ball.dy, abs(platforms[x].y - ball.y), abs(platforms[x].x - ball.x))) # game imput
             finalOP = output.index(max(output)) - 1
-
             platforms[x].move(finalOP)
             # platforms[x].draw(win)
             # ball.draw(win)
+
+            # if ge[x].fitness >= 10000:
+            # 	print("SCORE -> {}".format(balls[x].score))
+            # 	run = False
+            # 	break
 
             if ball.x > platforms[x].x:
                 ball.drawEnd(win)
@@ -169,10 +173,6 @@ def eval_genomes(genomes, config):
                     ge[x].fitness += 10
                     ball.score += 1
 
-            # if ge[x].fitness >= 10000:
-            # 	print("SCORE -> {}".format(balls[x].score))
-            # 	run = False
-            # 	break
 
         win.blit(BACKGROUND, (-10, -10))
         drawWall(win)
