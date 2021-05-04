@@ -18,4 +18,4 @@ and run
 
 ``python3 main.py -g`` 
 
-to test if it works. get used to the game and then run the program with the tags given to you to generate a report
+to test if it works. Get used to the game and then run the program with the tags given to you to generate a report
