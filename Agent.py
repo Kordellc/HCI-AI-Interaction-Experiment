@@ -1,6 +1,3 @@
-import pygame
-import time
-import random
 import os
 import neat
 import visualize
@@ -24,10 +21,10 @@ class Agent():
         game = E.Game()
         while playing:
             output = boy.activate(game.getEnviroment())
-            finalOP = [True, True, True]
+            finalOP = [False, False, False]
             for out in enumerate(output):
                 if round(out[1]):
-                    finalOP[out[0]] = False
+                    finalOP[out[0]] = True
             playing, score, _ = game.update(finalOP)
         with open(f"{filename}.pkl", "wb") as f:
             pickle.dump(winner, f)
@@ -44,10 +41,10 @@ class Agent():
     def getOutput(self, input):
         finalOP = [False, False, False]
         output = self.jumpyBoy.activate(input)
-        finalOP = [True, True, True]
+        finalOP = [False, False, False]
         for out in enumerate(output):
             if round(out[1]):
-                finalOP[out[0]] = False
+                finalOP[out[0]] = True
         return finalOP
 
 def eval_genomes(genomes, config):
@@ -55,7 +52,7 @@ def eval_genomes(genomes, config):
     ge = []
     games = []
     run = True
-    p = True
+    p = False
     for _, g in genomes:
         net = neat.nn.FeedForwardNetwork.create(g, config)  # build network
         nets.append(net)
@@ -74,14 +71,14 @@ def eval_genomes(genomes, config):
 
         for x, game in enumerate(games):
 
-            ge[x].fitness -= .1
+            # ge[x].fitness -= .5
             # ball.move(platforms[x])
             input =  game.getEnviroment()
             output = nets[x].activate(input)
-            finalOP = [True, True, True]
+            finalOP = [False, False, False]
             for out in enumerate(output):
                 if round(out[1]):
-                    finalOP[out[0]] = False
+                    finalOP[out[0]] = True
             # finalOP = output.index(max(output)) + 1
             playing, score, _ = game.update(finalOP)
             # output = nets[x].activate(
@@ -98,7 +95,7 @@ def eval_genomes(genomes, config):
                 break
             # ge[x] += .1
             # print((counts[x] - score))
-            if score < -100:
+            if 10000 < score < -100:
                 playing = False
             if not playing: #(score+ 100):
                 ge[x].fitness += game.getScore()

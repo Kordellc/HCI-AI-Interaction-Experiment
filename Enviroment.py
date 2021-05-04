@@ -1,20 +1,19 @@
 import pygame
 from pygame.locals import *
-import sys
 import random
-import time
 pygame.init()
 vec = pygame.math.Vector2  # 2 for two dimensional
 
 HEIGHT = 800
-WIDTH = 1200
+WIDTH = 800
 ACC = .5
 FRIC = -0.12
-FPS = 60
-
-FramePerSec = pygame.time.Clock()
+# FPS = 200
+#
+# FramePerSec = pygame.time.Clock()
 
 running = True
+
 
 class Player(pygame.sprite.Sprite):
     # the agent. will collect game info, parse and pass to AIAgent
@@ -24,7 +23,7 @@ class Player(pygame.sprite.Sprite):
         self.ydirection = 0
         self.surf = pygame.Surface((30, 30))
         self.surf.fill((128, 255, 40))
-        self.rect = self.surf.get_rect(center=(10, 120))
+        self.rect = self.surf.get_rect(center=(120, 720))
         self.pos = vec((10, 720))
         self.vel = vec(0, 0)
         self.acc = vec(0, 0)
@@ -39,7 +38,7 @@ class Player(pygame.sprite.Sprite):
         # pressed_keys = pygame.key.get_pressed()
 
         if self.xdirection != 0:
-            self.acc.x = -ACC* self.xdirection
+            self.acc.x = -ACC * self.xdirection
             self.xdirection = 0
         # else:
         #     self.acc.x = 0
@@ -68,16 +67,13 @@ class Player(pygame.sprite.Sprite):
 
     def update(self, platforms, action=[False, False, False]):
         hits = pygame.sprite.spritecollide(self, platforms, False)
-    # if self.vel.y > 0:
+        # if self.vel.y > 0:
         if hits:
             for plat in hits:
-                if plat.type == "Goal":
-                    if plat.point == True:  ##
-                        plat.point = False  ##
-                        self.score += 25  ##
                 if plat.type == "Danger":
                     return True
-                if self.pos.y < plat.rect.bottom and (self.pos.x - 15 < plat.rect.right and self.pos.x + 15 > plat.rect.left):
+                if self.pos.y < plat.rect.bottom: #and (
+                        #self.pos.x - 14 < plat.rect.right and self.pos.x + 14 > plat.rect.left):
                     # if hits[0].point == True:  ##
                     #     hits[0].point = False  ##
                     #     self.score += 1  ##
@@ -85,21 +81,27 @@ class Player(pygame.sprite.Sprite):
                         self.pos.y = plat.rect.top + 1
                         self.vel.y = 0
                         self.jumping = False
-                elif  self.pos.y > plat.rect.centery and (self.pos.x - 15 < plat.rect.right and self.pos.x + 15 > plat.rect.left):
+                elif self.pos.y > plat.rect.top:
                     # if hits[0].point == True:  ##
                     #     hits[0].point = False  ##
                     #     self.score += 1  ##
                     if self.vel.y < 0:
-                        self.pos.y = plat.rect.bottom +30
+                        self.pos.y = plat.rect.bottom + 30
                         self.vel.y = 0
                         self.cancel_jump()
-                elif self.pos.x < plat.rect.left:
+                if self.pos.x <= plat.rect.left:
+                    if self.vel.x > 0:
+                        self.pos.x = plat.rect.left - 15
+                        self.vel.x = 0
                     # if hits[0].point == True:  ##
                     #     hits[0].point = False  ##
                     #     self.score += 1  ##
                     # self.pos.x = plat.rect.left - 15
                     self.vel.x = 0
-                elif self.pos.x > plat.rect.right:
+                elif self.pos.x >= plat.rect.right:
+                    if self.vel.x != 0:
+                        self.pos.x = plat.rect.right #+ 30
+                        self.vel.x = 0
                     # if hits[0].point == True:  ##
                     #     hits[0].point = False  ##
                     #     if hits[0].val == True:
@@ -117,9 +119,8 @@ class Player(pygame.sprite.Sprite):
 
         if action[2]:
             self.jump(platforms)
-        else :
+        else:
             self.cancel_jump()
-
 
         # self.globalX += pow(self.acc.x, 3)
         if self.pos.x < 15:
@@ -131,16 +132,16 @@ class Player(pygame.sprite.Sprite):
 class platform(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.surf = pygame.Surface((random.randint(50, 100), 30))
+        self.surf = pygame.Surface((65, 30))
         self.surf.fill((0, 0, 255))
         self.rect = self.surf.get_rect(center=(random.randint(0, WIDTH - 10),
                                                random.randint(0, HEIGHT - 30)))
+
         self.type = "Platform"
-        self.moving = True
-        self.point = False
 
     def move(self):
         pass
+
 
 class obstacle(pygame.sprite.Sprite):
     def __init__(self):
@@ -150,58 +151,23 @@ class obstacle(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect(center=(random.randint(0, WIDTH - 10),
                                                random.randint(0, HEIGHT - 30)))
         self.type = "Danger"
-        self.moving = True
-        self.point = True
 
     def move(self):
         pass
 
-class goalPost(pygame.sprite.Sprite):
-    def __init__(self, truth=False):
-        super().__init__()
-        self.surf = pygame.Surface((65, 30))
-        self.surf.fill((0, 255, 0))
-        self.rect = self.surf.get_rect(center=(random.randint(0, WIDTH - 10),
-                                               random.randint(0, HEIGHT - 30)))
-        self.moving = True
-        self.point = True
-        self.type = "Goal"
-        self.check = truth
 
-    def move(self):
-        pass
-
-    def testEnd(self):
-        if self.check and not self.point:
-            return True
-        return False
 
 
 class Game():
     def __init__(self, show=True, human=True):
         # GET LEVEL
-        self.all_sprites = pygame.sprite.Group()
-        self.platforms = pygame.sprite.Group()
-        self.things = pygame.sprite.Group()
-        self.obstacles = pygame.sprite.Group()
-        self.coins = pygame.sprite.Group()
-        self.P1 = Player()
-        self.laser = obstacle()
-        self.score = 0
-        self.displaysurface = None
-        self.running = True
-        self.show = show
-        self.reset(show)
-        self.coop = human
-
-
+        self.reset(show, human)
 
 
     def reset(self, show=True, human=True):
         # global go
         pygame.init()
         if show:
-            pygame.init()
             self.displaysurface = pygame.display.set_mode((WIDTH, HEIGHT))
             pygame.display.set_caption("HCI-Experiment")
         self.all_sprites = pygame.sprite.Group()
@@ -211,6 +177,7 @@ class Game():
         self.coins = pygame.sprite.Group()
         self.P1 = Player()
         self.laser = obstacle()
+        self.length = 0
         self.score = 0
         self.running = True
         self.coop = human
@@ -234,27 +201,11 @@ class Game():
         self.all_sprites.add(PT1)
         self.platforms.add(PT1)
 
-        # C1 = goalPost()
-        # C1.rect = C1.surf.get_rect(center=(WIDTH / 4, 180))
-        # self.platforms.add(C1)
-        # self.things.add(C1)
-        # self.coins.add(C1)
-        # self.all_sprites.add(C1)
-        #
-        # C2 = goalPost()
-        # C2.rect = C2.surf.get_rect(center=(WIDTH / 4 + WIDTH /2 , 180))
-        # self.platforms.add(C2)
-        # self.coins.add(C2)
-        # self.things.add(C2)
-        # self.all_sprites.add(C2)
-
-
         self.obj_gen()
 
         self.score = 0
         self.P1.score = 0
         self.running = True
-        PT1.point = False
 
     def update(self, action=[False, False, False]):
         override = False
@@ -273,32 +224,34 @@ class Game():
             entity.move()
 
         if self.P1.rect.top > HEIGHT:
-        #     self.P1.pos.x = 5
+            #     self.P1.pos.x = 5
             self.P1.pos.y = HEIGHT - 100
         #     self.P1.score = self.P1.score - 10
         push = (self.score / 5000 + 1)
         if self.P1.pos.x >= WIDTH / 2:  # side-scroller
             if self.laser.rect.x > 0:
                 if self.laser.rect.x > push:
-                    self.laser.rect.x -= push*1.5-1
-                else:
-                    self.laser.rect.x = 0
-            self.P1.pos.x -= abs(self.P1.vel.x)+2.5
+                    self.laser.rect.x -= push# * 1.5 - 1
+            self.P1.pos.x -= abs(self.P1.vel.x) + 2.5
             # self.P1.vel.x = 0;
-            self.score += round((abs(self.P1.vel.x)+1) / 10)
+            self.score += round((abs(self.P1.vel.x) + 1) / 10)
             for plat in self.things:
-                plat.rect.x -= abs(self.P1.vel.x) * push/2.5
+                plat.rect.x -= abs(self.P1.vel.x) * push / 2.5
                 # plat.rect.x -= abs(self.P1.pos.x - self.posx)
                 # plat.rect.x -= abs(self.P1.vel.x/2)
-                if plat.rect.right < 0:
+                if plat.rect.left < self.laser.rect.x:
                     plat.kill()
         else:
-            self.laser.rect.x += push
+            if self.length < 1:
+                self.length +=.5
+            else:
+                self.length = 0
+                self.laser.rect.x += push
         x = action
         self.obj_gen()
         if self.show:
             pygame.display.update()
-            # FramePerSec.tick(FPS)
+         # FramePerSec.tick(FPS)
             for event in pygame.event.get():
                 if event.type == QUIT:
                     # self.endGame()
@@ -307,8 +260,8 @@ class Game():
                     self.running = False
                     pygame.quit()
                     return False, self.getScore(), override
-        # self.P1.update(self.platforms)
-        # keys = pygame.key.get_pressed()
+            # self.P1.update(self.platforms)
+            # keys = pygame.key.get_pressed()
             if self.coop:
                 pressed = pygame.key.get_pressed()
 
@@ -323,30 +276,31 @@ class Game():
                     x[1] = True
                 if up:
                     x[2] = True
-        if(self.P1.update(self.platforms, x)):
+        if (self.P1.update(self.platforms, x)) or self.laser.rect.x > self.P1.pos.x:
             self.endGame()
 
+
         return self.running, self.getScore(), override
+
     # def load(self):
 
     def endGame(self):
         self.running = False
         if self.show:
             pygame.quit()
+
     def getScore(self):
         return round(self.score + self.P1.score)
 
-
     def getEnviroment(self):
         visible = []
-        visible.append(self.score)
+        visible.append(self.score/ 5000 + 1)
         visible.append(self.laser.rect.x)
         visible.append(self.P1.pos.x)
         visible.append(self.P1.pos.y)
         for coin in self.coins:
             visible.append(coin.rect.x)
             visible.append(coin.rect.y)
-            visible.append(coin.point)
 
         for block in self.obstacles:
             visible.append(block.rect.x)
@@ -354,41 +308,42 @@ class Game():
 
         return visible
 
-
     def check(self, platform, groupies):
-        if pygame.sprite.spritecollideany(platform,groupies):
+        if pygame.sprite.spritecollideany(platform, groupies):
             return True
         else:
             for entity in groupies:
                 if entity == platform:
                     continue
-                if (abs(platform.rect.top - entity.rect.bottom) < 40) and (abs(platform.rect.bottom - entity.rect.top) < 40):
+                if (abs(platform.rect.top - entity.rect.bottom) < 60) and (
+                        abs(platform.rect.bottom - entity.rect.top) < 60):
                     return True
             C = False
 
     def obj_gen(self):
-        while len(self.coins) < 3:
-            width = random.randrange(50, 100)
-            o = goalPost()
-            C = True
-            while C:
-                o = goalPost()
-                o.rect.center = (random.randrange(WIDTH - width, WIDTH*2), random.randrange(HEIGHT - 350, HEIGHT - 100))
-                C = self.check(o, self.things)
-            self.things.add(o)
-            self.coins.add(o)
-            self.platforms.add(o)
-            self.all_sprites.add(o)
-        while len(self.obstacles) < 3:
-            width = random.randrange(50, 100)
+        while len(self.obstacles) < 2:
+            width = 200
             C = True
             while C:
                 o = obstacle()
-                o.rect.center = (random.randrange((WIDTH - width), (WIDTH * 2 - width)),
-                                 random.randrange(HEIGHT - 300, HEIGHT - 60))
+                o.rect.center = (random.randrange((WIDTH), (WIDTH * 1.5 + width)),
+                                 random.randrange(HEIGHT - 150, HEIGHT - 70))
                 C = self.check(o, self.things)
             self.things.add(o)
             self.obstacles.add(o)
+            self.platforms.add(o)
+            self.all_sprites.add(o)
+        while len(self.coins) < 2:
+            width = random.randrange(50, 100)
+            o = platform()
+            C = True
+            while C:
+                o = platform()
+                o.rect.center = (random.randrange((WIDTH), (WIDTH * 3 + width)),
+                                 random.randrange(HEIGHT - 180, HEIGHT - 60))
+                C = self.check(o, self.things)
+            self.things.add(o)
+            self.coins.add(o)
             self.platforms.add(o)
             self.all_sprites.add(o)
 

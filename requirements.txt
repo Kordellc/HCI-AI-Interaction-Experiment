@@ -1,9 +1,6 @@
-# pandas
 numpy~=1.19.5
 matplotlib~=3.3.4
-# tensorflow~=2.4.1
-# gym~=0.18.0
 pygame~=2.0.1
-# tensorflow-gpu~=2.4.1
-# tflearn~=0.5.0
 graphviz~=0.16
+neat-python~=0.92
+neat
