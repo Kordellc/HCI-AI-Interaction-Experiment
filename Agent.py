@@ -1,5 +1,14 @@
 import os
 import neat
+import neat.config
+import neat.genome
+import neat.reproduction
+import neat.nn
+import neat.species
+import neat.stagnation
+import neat.population
+import neat.reporting
+import neat.statistics
 import visualize
 import Enviroment as E
 import pickle
@@ -9,9 +18,9 @@ class Agent():
     def __init__(self):
         local_dir = os.path.dirname(__file__)
         config_path = os.path.join(local_dir, "config-FeedForward.txt")
-        self.config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
-                                    neat.DefaultSpeciesSet, neat.DefaultStagnation,
-                                    config_path)
+        self.config = neat.config.Config(neat.genome.DefaultGenome, neat.reproduction.DefaultReproduction,
+                                neat.species.DefaultSpeciesSet, neat.stagnation.DefaultStagnation,
+                                config_path)
         self.jumpyBoy = neat.nn.FeedForwardNetwork
 
     def train(self, filename):

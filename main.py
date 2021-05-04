@@ -87,7 +87,7 @@ def testRun(AgentID, runnum):
         a = 0
         b = 0
         while x:
-            x, y, z = g.update()
+            x, y, z = g.update(Bot.getOutput(g.getEnviroment()))
             if z:
                 a += 1
             else:
