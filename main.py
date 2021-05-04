@@ -55,7 +55,8 @@ def testRun(AgentID, runnum):
     data = []
     # startuser training bit
     stage = True
-    print("Your task will be to run through a game environment, then supervise an AI completing the "
+    print("\n\n**************************************************************************************\n"
+          "Your task will be to run through a game environment, then supervise an AI completing the "
                    "same course, and preventing them from making mistakes by overriding control. In this game you must go "
                    "as far as you can without hitting the yellow squares or the red line. You will submit Three runs. Use WASD to move")
     # part2- human runs
