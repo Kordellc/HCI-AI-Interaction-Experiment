@@ -12,6 +12,8 @@ In an interactive shell, run
 
 ``cd HCI-AI-Interaction-Experiment``
 
+Warning: if you downladed the zip you will need to make sure you are in the same directory as requirements.txt as it puts everything into a second folder inside
+
 ``pip3 install -r requirements.txt``
 
 and run
